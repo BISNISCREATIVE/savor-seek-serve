@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { API_BASE_URL } from '@/config/constants';
+
+const API_BASE_URL = 'https://berestaurantappformentee-production.up.railway.app';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

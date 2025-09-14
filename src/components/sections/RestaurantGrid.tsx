@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppSelector } from '@/store/hooks';
 import RestaurantCard from '@/components/cards/RestaurantCard';
 import { Restaurant } from '@/types';
+import { restaurantService } from '@/services/restaurants';
 
-// Mock data for demonstration
+// Mock data for demonstration (fallback)
 const mockRestaurants: Restaurant[] = Array.from({ length: 12 }, (_, i) => ({
   id: `restaurant-${i + 1}`,
   name: 'Burger King',
@@ -30,43 +31,75 @@ export default function RestaurantGrid({
 }: RestaurantGridProps) {
   const { category, searchQuery, sortBy, sortOrder } = useAppSelector((state) => state.filters);
   const [showAll, setShowAll] = useState(false);
-  const [isLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  // Filter and sort restaurants based on Redux state
-  let filteredRestaurants = mockRestaurants;
+  // Fetch restaurants from API
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        let result;
+        if (title === "Recommended") {
+          result = await restaurantService.getRecommendedRestaurants();
+          setRestaurants(result);
+        } else {
+          const filters = {
+            search: searchQuery || undefined,
+            category: category !== 'all' ? category : undefined,
+            sortBy: sortBy || undefined,
+            limit: showAll ? undefined : limit,
+          };
+          const response = await restaurantService.getRestaurants(filters);
+          setRestaurants(response.restaurants);
+        }
+      } catch (err) {
+        console.error('Failed to fetch restaurants:', err);
+        setError('Failed to load restaurants. Using demo data.');
+        // Fallback to mock data if API fails
+        setRestaurants(mockRestaurants);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // Apply search filter
-  if (searchQuery) {
+    fetchRestaurants();
+  }, [category, searchQuery, sortBy, sortOrder, showAll, limit, title]);
+
+  // Filter and sort restaurants (client-side backup if needed)
+  let filteredRestaurants = restaurants;
+
+  // Apply search filter (client-side backup)
+  if (searchQuery && restaurants.length > 0) {
     filteredRestaurants = filteredRestaurants.filter(restaurant =>
-      restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      restaurant.location.toLowerCase().includes(searchQuery.toLowerCase())
+      restaurant.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      restaurant.location?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }
 
-  // Apply category filter
-  if (category && category !== 'all') {
-    // Mock category filtering logic
-    filteredRestaurants = filteredRestaurants.filter(() => Math.random() > 0.3);
+  // Apply sorting (client-side backup)
+  if (sortBy && filteredRestaurants.length > 0) {
+    filteredRestaurants.sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case 'rating':
+          comparison = (b.rating || 0) - (a.rating || 0);
+          break;
+        case 'name':
+          comparison = (a.name || '').localeCompare(b.name || '');
+          break;
+        case 'distance':
+          comparison = parseFloat(a.distance || '0') - parseFloat(b.distance || '0');
+          break;
+        default:
+          comparison = 0;
+      }
+      return sortOrder === 'desc' ? comparison : -comparison;
+    });
   }
-
-  // Apply sorting
-  filteredRestaurants.sort((a, b) => {
-    let comparison = 0;
-    switch (sortBy) {
-      case 'rating':
-        comparison = (b.rating || 0) - (a.rating || 0);
-        break;
-      case 'name':
-        comparison = a.name.localeCompare(b.name);
-        break;
-      case 'distance':
-        comparison = parseFloat(a.distance) - parseFloat(b.distance);
-        break;
-      default:
-        comparison = 0;
-    }
-    return sortOrder === 'desc' ? comparison : -comparison;
-  });
 
   // Apply limit
   const displayedRestaurants = showAll ? filteredRestaurants : filteredRestaurants.slice(0, limit);
@@ -117,6 +150,13 @@ export default function RestaurantGrid({
             </Button>
           )}
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-yellow-800 text-sm">{error}</p>
+          </div>
+        )}
 
         {/* Results Count */}
         {(searchQuery || category !== 'all') && (

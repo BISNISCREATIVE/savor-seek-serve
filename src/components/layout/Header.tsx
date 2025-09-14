@@ -1,21 +1,34 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Menu, Search, User } from 'lucide-react';
+import { ShoppingBag, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import { toggleCart, setMenuOpen } from '@/store/slices/uiSlice';
-import { setSearchQuery } from '@/store/slices/filtersSlice';
+import { toggleCart } from '@/store/slices/uiSlice';
+import { logout, fetchUserProfile } from '@/store/slices/authSlice';
+import LoginDialog from '@/components/auth/LoginDialog';
+import RegisterDialog from '@/components/auth/RegisterDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
+function cn(...classes: (string | undefined | null | boolean)[]): string {
+  return classes.filter(Boolean).join(' ');
+}
 
 export default function Header() {
   const dispatch = useAppDispatch();
-  const { itemCount } = useAppSelector((state) => state.cart);
-  const { searchQuery } = useAppSelector((state) => state.filters);
-  const [localSearch, setLocalSearch] = useState(searchQuery);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [showRegisterDialog, setShowRegisterDialog] = useState(false);
   
-  // Mock login state - you can replace this with actual auth state
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const cartItems = useAppSelector((state) => state.cart.items);
+  const { user, token } = useAppSelector((state) => state.auth);
+  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -26,164 +39,162 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    dispatch(setSearchQuery(localSearch));
-  };
+  useEffect(() => {
+    // Fetch user profile on app load if token exists
+    if (token && !user) {
+      dispatch(fetchUserProfile());
+    }
+  }, [token, user, dispatch]);
 
   const handleCartClick = () => {
     dispatch(toggleCart());
   };
 
-  const handleMenuClick = () => {
-    dispatch(setMenuOpen(true));
+  const handleLogout = () => {
+    dispatch(logout());
   };
 
-  const handleAuthToggle = () => {
-    setIsLoggedIn(!isLoggedIn);
+  const getUserInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
-    <header className={`sticky top-0 z-50 w-full transition-all duration-300 ${
-      isScrolled 
-        ? 'bg-white shadow-elevated border-b' 
-        : 'border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'
-    }`}>
-      <div className="container mx-auto px-4 lg:px-8">
-        <div className="flex h-20 items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={handleMenuClick}
-            >
-              <Menu className="h-6 w-6" />
-            </Button>
-            
+    <>
+      <header className={cn(
+        "sticky top-0 z-50 w-full transition-all duration-300",
+        isScrolled 
+          ? "bg-white shadow-elevated" 
+          : "bg-transparent"
+      )}>
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="flex h-20 items-center justify-between">
+            {/* Logo */}
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-card">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary">
                 <span className="text-xl">🍽️</span>
               </div>
-              <span className={`text-2xl font-bold ${isScrolled ? 'text-foreground' : 'text-white'}`}>
+              <span className={cn(
+                "text-2xl font-bold transition-colors",
+                isScrolled ? "text-gray-900" : "text-white"
+              )}>
                 Foody
               </span>
             </div>
-          </div>
 
-          {/* Search Bar - Hidden on mobile and when not scrolled */}
-          {!isScrolled && (
-            <form 
-              onSubmit={handleSearch}
-              className="hidden md:flex flex-1 max-w-md mx-8"
-            >
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search restaurants, food and drink"
-                  value={localSearch}
-                  onChange={(e) => setLocalSearch(e.target.value)}
-                  className="pl-10 pr-4 rounded-full bg-white text-gray-900"
-                />
-              </div>
-            </form>
-          )}
+            {/* Right Side - Auth & Cart */}
+            <div className="flex items-center gap-4">
+              {/* Cart */}
+              <button 
+                onClick={handleCartClick}
+                className={cn(
+                  "relative p-2 rounded-lg transition-colors duration-200",
+                  isScrolled 
+                    ? "text-gray-700 hover:bg-gray-100" 
+                    : "text-white hover:bg-white/20"
+                )}
+              >
+                <ShoppingBag className="h-6 w-6" />
+                {totalItems > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                  >
+                    {totalItems}
+                  </Badge>
+                )}
+              </button>
 
-          {/* Actions */}
-          <div className="flex items-center gap-4">
-            {!isLoggedIn ? (
-              /* Auth Buttons */
-              <div className="hidden lg:flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  className={`rounded-full ${
-                    isScrolled 
-                      ? 'border-gray-300 text-gray-700 hover:bg-gray-50' 
-                      : 'border-white/30 text-white hover:bg-white/20'
-                  }`}
-                  onClick={handleAuthToggle}
-                >
-                  Sign In
-                </Button>
-                <Button 
-                  className={`rounded-full ${
-                    isScrolled 
-                      ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
-                      : 'bg-white text-gray-900 hover:bg-white/90'
-                  }`}
-                  onClick={handleAuthToggle}
-                >
-                  Sign Up
-                </Button>
-              </div>
-            ) : (
-              /* User Profile */
-              <div className="hidden lg:flex items-center gap-4">
+              {/* Authentication */}
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-xs bg-orange-500 text-white">
+                          {getUserInitials(user.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className={cn(
+                        "text-sm font-semibold",
+                        isScrolled ? "text-gray-700" : "text-white"
+                      )}>
+                        {user.name}
+                      </span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem className="cursor-pointer">
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer">
+                      My Orders
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      className="cursor-pointer text-red-600 focus:text-red-600"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-lg">
-                    JD
-                  </div>
-                  <span className={`text-lg font-semibold ${
-                    isScrolled ? 'text-gray-900' : 'text-white'
-                  }`}>
-                    John Doe
-                  </span>
+                  <Button
+                    onClick={() => setShowLoginDialog(true)}
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "font-semibold border-2 transition-all duration-200 rounded-full",
+                      isScrolled 
+                        ? "text-gray-700 border-gray-300 hover:bg-gray-50"
+                        : "text-white border-white/30 hover:bg-white/10"
+                    )}
+                  >
+                    Sign In
+                  </Button>
+                  <Button
+                    onClick={() => setShowRegisterDialog(true)}
+                    size="sm"
+                    className={cn(
+                      "font-semibold transition-all duration-200 rounded-full",
+                      isScrolled 
+                        ? "bg-primary text-white hover:bg-primary/90"
+                        : "bg-white text-gray-800 hover:bg-white/90"
+                    )}
+                  >
+                    Sign Up
+                  </Button>
                 </div>
-              </div>
-            )}
-
-            {/* User Icon - Mobile only */}
-            <Button variant="ghost" size="icon" className="lg:hidden">
-              <User className={`h-5 w-5 ${isScrolled ? 'text-gray-900' : 'text-white'}`} />
-            </Button>
-
-            {/* Cart */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative hover-scale transition-all duration-200"
-              onClick={handleCartClick}
-            >
-              <ShoppingCart className={`h-6 w-6 ${isScrolled ? 'text-gray-900' : 'text-white'}`} />
-              {itemCount > 0 && (
-                <Badge 
-                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center bg-red-500 text-white border-none animate-scale-in pulse"
-                >
-                  {itemCount > 99 ? '99+' : itemCount}
-                </Badge>
               )}
-            </Button>
-
-            {/* Demo Toggle Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleAuthToggle}
-              className={`text-xs ${isScrolled ? 'text-gray-600' : 'text-white/70'}`}
-            >
-              {isLoggedIn ? 'Logout' : 'Demo Login'}
-            </Button>
+            </div>
           </div>
         </div>
+      </header>
 
-        {/* Mobile Search */}
-        <div className="md:hidden pb-4">
-          <form onSubmit={handleSearch}>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search restaurants, food and drink"
-                value={localSearch}
-                onChange={(e) => setLocalSearch(e.target.value)}
-                className="pl-10 pr-4 rounded-full bg-secondary"
-              />
-            </div>
-          </form>
-        </div>
-      </div>
-    </header>
+      {/* Auth Dialogs */}
+      <LoginDialog 
+        isOpen={showLoginDialog} 
+        onClose={() => setShowLoginDialog(false)}
+        onSwitchToRegister={() => {
+          setShowLoginDialog(false);
+          setShowRegisterDialog(true);
+        }}
+      />
+      <RegisterDialog 
+        isOpen={showRegisterDialog} 
+        onClose={() => setShowRegisterDialog(false)}
+        onSwitchToLogin={() => {
+          setShowRegisterDialog(false);
+          setShowLoginDialog(true);
+        }}
+      />
+    </>
   );
 }
