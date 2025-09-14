@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAppDispatch } from '@/store/hooks';
 import { addToCart } from '@/store/slices/cartSlice';
 import { Restaurant } from '@/types';
+import { toast } from '@/hooks/use-toast';
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
@@ -34,6 +35,13 @@ export default function RestaurantCard({ restaurant, onViewDetails }: Restaurant
       restaurantId: restaurant.id,
       imageUrl: restaurant.imageUrl,
     }));
+    
+    // Show success toast
+    toast({
+      title: "Added to cart!",
+      description: `${restaurant.name} Special has been added to your cart.`,
+      duration: 2000,
+    });
   };
 
   const handleCardClick = () => {
@@ -46,7 +54,7 @@ export default function RestaurantCard({ restaurant, onViewDetails }: Restaurant
 
   return (
     <Card 
-      className="group hover:shadow-elevated transition-all duration-300 cursor-pointer overflow-hidden"
+      className="group hover:shadow-elevated transition-all duration-300 cursor-pointer overflow-hidden hover-scale animate-fade-in"
       onClick={handleCardClick}
     >
       <CardContent className="p-4">
@@ -98,8 +106,9 @@ export default function RestaurantCard({ restaurant, onViewDetails }: Restaurant
               <Button
                 size="sm"
                 variant="outline"
-                className="flex-shrink-0 w-8 h-8 rounded-full p-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                className="flex-shrink-0 w-8 h-8 rounded-full p-0 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200 hover-scale"
                 onClick={handleAddToCart}
+                disabled={restaurant.isOpen === false}
               >
                 <Plus className="h-4 w-4" />
               </Button>

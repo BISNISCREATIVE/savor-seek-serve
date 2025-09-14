@@ -1,4 +1,4 @@
-import { Minus, Plus, Trash, X } from 'lucide-react';
+import { Minus, Plus, Trash, X, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { updateQuantity, removeFromCart, clearCart } from '@/store/slices/cartSlice';
 import { setCartOpen } from '@/store/slices/uiSlice';
+import { toast } from '@/hooks/use-toast';
 
 export default function CartDrawer() {
   const dispatch = useAppDispatch();
@@ -27,6 +28,11 @@ export default function CartDrawer() {
   const handleCheckout = () => {
     // In a real app, this would navigate to checkout
     console.log('Proceeding to checkout with items:', items);
+    toast({
+      title: "Checkout started!",
+      description: "Redirecting you to the checkout page...",
+      duration: 3000,
+    });
     dispatch(setCartOpen(false));
   };
 
@@ -66,13 +72,16 @@ export default function CartDrawer() {
           {/* Cart Items */}
           <div className="flex-1 overflow-y-auto px-6">
             {items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center py-8">
+              <div className="flex flex-col items-center justify-center h-full text-center py-8 animate-fade-in">
                 <div className="text-6xl mb-4">🛒</div>
                 <h3 className="text-lg font-semibold mb-2">Your cart is empty</h3>
                 <p className="text-muted-foreground mb-4">
                   Add some delicious items to get started
                 </p>
-                <Button onClick={() => dispatch(setCartOpen(false))}>
+                <Button 
+                  onClick={() => dispatch(setCartOpen(false))}
+                  className="hover-scale"
+                >
                   Browse Menu
                 </Button>
               </div>
@@ -84,15 +93,19 @@ export default function CartDrawer() {
                     variant="ghost"
                     size="sm"
                     onClick={handleClearCart}
-                    className="text-red-500 hover:text-red-600"
+                    className="text-red-500 hover:text-red-600 hover-scale"
                   >
                     Clear All
                   </Button>
                 </div>
 
                 {/* Cart Items List */}
-                {items.map((item) => (
-                  <div key={item.id} className="flex gap-4 p-4 border rounded-lg">
+                {items.map((item, index) => (
+                  <div 
+                    key={item.id} 
+                    className="flex gap-4 p-4 border rounded-lg hover-scale animate-fade-in transition-all duration-200"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
                     {/* Item Image */}
                     <div className="w-16 h-16 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
                       {item.imageUrl ? (
@@ -112,7 +125,10 @@ export default function CartDrawer() {
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium line-clamp-1">{item.name}</h4>
                       <p className="text-sm text-muted-foreground">
-                        {formatPrice(item.price)}
+                        {formatPrice(item.price)} each
+                      </p>
+                      <p className="text-xs text-primary font-medium">
+                        Subtotal: {formatPrice(item.price * item.quantity)}
                       </p>
                       
                       {item.notes && (
@@ -127,7 +143,7 @@ export default function CartDrawer() {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-8 w-8 hover-scale"
                             onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
                           >
                             <Minus className="h-3 w-3" />
@@ -138,7 +154,7 @@ export default function CartDrawer() {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-8 w-8 hover-scale"
                             onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
                           >
                             <Plus className="h-3 w-3" />
@@ -148,7 +164,7 @@ export default function CartDrawer() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-red-500 hover:text-red-600"
+                          className="h-8 w-8 text-red-500 hover:text-red-600 hover-scale"
                           onClick={() => handleRemoveItem(item.id)}
                         >
                           <Trash className="h-3 w-3" />
@@ -190,10 +206,11 @@ export default function CartDrawer() {
               {/* Checkout Button */}
               <Button 
                 onClick={handleCheckout}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground hover-scale animate-slide-in-right"
                 size="lg"
               >
-                Proceed to Checkout
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Proceed to Checkout ({formatPrice(total + 7000)})
               </Button>
             </div>
           )}

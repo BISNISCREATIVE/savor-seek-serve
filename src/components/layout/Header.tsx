@@ -143,13 +143,13 @@ export default function Header() {
             <Button
               variant="ghost"
               size="icon"
-              className="relative"
+              className="relative hover-scale transition-all duration-200"
               onClick={handleCartClick}
             >
               <ShoppingCart className={`h-6 w-6 ${isScrolled ? 'text-gray-900' : 'text-white'}`} />
               {itemCount > 0 && (
                 <Badge 
-                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center bg-red-500 text-white border-none"
+                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center bg-red-500 text-white border-none animate-scale-in pulse"
                 >
                   {itemCount > 99 ? '99+' : itemCount}
                 </Badge>
